@@ -36,6 +36,13 @@ import androidx.compose.foundation.background
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.style.TextAlign
 
+enum class ProfileScreenType {
+    Main,
+    Settings,
+    HelpSupport,
+    About
+}
+
 @Composable
 fun ProfileScreen(
     authManager: AuthManager,
@@ -48,6 +55,9 @@ fun ProfileScreen(
     // Profile photo state
     var profilePhoto by remember { mutableStateOf<Bitmap?>(profilePhotoStorage.getProfilePhoto()) }
     var showPhotoOptions by remember { mutableStateOf(false) }
+    
+    // Navigation state
+    var currentScreen by remember { mutableStateOf<ProfileScreenType>(ProfileScreenType.Main) }
     
     // Photo picker launcher
     val photoPickerLauncher = rememberLauncherForActivityResult(
@@ -70,170 +80,218 @@ fun ProfileScreen(
     }
     
     Box(modifier = Modifier.fillMaxSize()) {
-        Column(
+        when (currentScreen) {
+            ProfileScreenType.Main -> {
+                MainProfileContent(
+                    currentUser = currentUser,
+                    profilePhoto = profilePhoto,
+                    showPhotoOptions = showPhotoOptions,
+                    onPhotoOptionsChange = { showPhotoOptions = it },
+                    onNavigateToSettings = { currentScreen = ProfileScreenType.Settings },
+                    onNavigateToHelpSupport = { currentScreen = ProfileScreenType.HelpSupport },
+                    onNavigateToAbout = { currentScreen = ProfileScreenType.About },
+                    onLogout = onLogout,
+                    photoPickerLauncher = photoPickerLauncher,
+                    profilePhotoStorage = profilePhotoStorage,
+                    onProfilePhotoChange = { profilePhoto = it }
+                )
+            }
+            ProfileScreenType.Settings -> {
+                SettingsScreen(
+                    onBackPressed = { currentScreen = ProfileScreenType.Main }
+                )
+            }
+            ProfileScreenType.HelpSupport -> {
+                HelpSupportScreen(
+                    onBackPressed = { currentScreen = ProfileScreenType.Main }
+                )
+            }
+            ProfileScreenType.About -> {
+                AboutScreen(
+                    onBackPressed = { currentScreen = ProfileScreenType.Main }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MainProfileContent(
+    currentUser: com.example.myapplication.User?,
+    profilePhoto: Bitmap?,
+    showPhotoOptions: Boolean,
+    onPhotoOptionsChange: (Boolean) -> Unit,
+    onNavigateToSettings: () -> Unit,
+    onNavigateToHelpSupport: () -> Unit,
+    onNavigateToAbout: () -> Unit,
+    onLogout: () -> Unit,
+    photoPickerLauncher: androidx.activity.result.ActivityResultLauncher<String>,
+    profilePhotoStorage: ProfilePhotoStorage,
+    onProfilePhotoChange: (Bitmap?) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        // Profile photo with upload functionality
+        Box(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .size(140.dp)
+                .shadow(
+                    elevation = 8.dp,
+                    shape = CircleShape,
+                    spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                )
+                .background(
+                    color = if (profilePhoto != null) Color.Transparent else MaterialTheme.colorScheme.primaryContainer,
+                    shape = CircleShape
+                )
+                .border(
+                    width = 3.dp,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                    shape = CircleShape
+                )
+                .clickable { onPhotoOptionsChange(true) },
+            contentAlignment = Alignment.Center
         ) {
-            // Profile photo with upload functionality
-            Box(
-                modifier = Modifier
-                    .size(140.dp)
-                    .shadow(
-                        elevation = 8.dp,
-                        shape = CircleShape,
-                        spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+            if (profilePhoto != null) {
+                // Display uploaded profile photo
+                Image(
+                    bitmap = profilePhoto.asImageBitmap(),
+                    contentDescription = "Profile Photo",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+                
+                // Edit overlay
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            color = Color.Black.copy(alpha = 0.3f),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Edit,
+                        contentDescription = "Edit Photo",
+                        modifier = Modifier.size(32.dp),
+                        tint = Color.White
                     )
-                    .background(
-                        color = if (profilePhoto != null) Color.Transparent else MaterialTheme.colorScheme.primaryContainer,
-                        shape = CircleShape
+                }
+            } else {
+                // Default profile icon
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Person,
+                        contentDescription = "Profile",
+                        modifier = Modifier.size(60.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
                     )
-                    .border(
-                        width = 3.dp,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                        shape = CircleShape
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Tap to upload",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                        textAlign = TextAlign.Center
                     )
-                    .clickable { showPhotoOptions = true },
-                contentAlignment = Alignment.Center
-            ) {
-                if (profilePhoto != null) {
-                    // Display uploaded profile photo
-                    Image(
-                        bitmap = profilePhoto!!.asImageBitmap(),
-                        contentDescription = "Profile Photo",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape),
-                        contentScale = ContentScale.Crop
-                    )
-                    
-                    // Edit overlay
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                color = Color.Black.copy(alpha = 0.3f),
-                                shape = CircleShape
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Edit,
-                            contentDescription = "Edit Photo",
-                            modifier = Modifier.size(32.dp),
-                            tint = Color.White
-                        )
-                    }
-                } else {
-                    // Default profile icon
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Person,
-                            contentDescription = "Profile",
-                            modifier = Modifier.size(60.dp),
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Tap to upload",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
-                            textAlign = TextAlign.Center
-                        )
-                    }
                 }
             }
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            Text(
-                text = "Profile",
-                style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.primary
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        Text(
+            text = "Profile",
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.primary
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // User details
+        currentUser?.let { user ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp)
+                ) {
+                    ProfileInfoRow("Name", user.fullName)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    ProfileInfoRow("Mobile", user.mobileNumber)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    ProfileInfoRow("Status", "Active")
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        // Profile actions
+        Column(
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            ProfileActionButton(
+                icon = Icons.Outlined.Settings,
+                label = "Settings",
+                onClick = onNavigateToSettings
             )
             
-            Spacer(modifier = Modifier.height(16.dp))
+            ProfileActionButton(
+                icon = Icons.AutoMirrored.Outlined.Help,
+                label = "Help & Support",
+                onClick = onNavigateToHelpSupport
+            )
             
-            // User details
-            currentUser?.let { user ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp)
-                    ) {
-                        ProfileInfoRow("Name", user.fullName)
-                        Spacer(modifier = Modifier.height(12.dp))
-                        ProfileInfoRow("Mobile", user.mobileNumber)
-                        Spacer(modifier = Modifier.height(12.dp))
-                        ProfileInfoRow("Status", "Active")
-                    }
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(32.dp))
-            
-            // Profile actions
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                ProfileActionButton(
-                    icon = Icons.Outlined.Settings,
-                    label = "Settings",
-                    onClick = { /* Navigate to settings */ }
-                )
-                
-                ProfileActionButton(
-                    icon = Icons.AutoMirrored.Outlined.Help,
-                    label = "Help & Support",
-                    onClick = { /* Navigate to help */ }
-                )
-                
-                ProfileActionButton(
-                    icon = Icons.Outlined.Info,
-                    label = "About",
-                    onClick = { /* Navigate to about */ }
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(32.dp))
-            
-            // Logout button
-            Button(
-                onClick = onLogout,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.Logout,
-                    contentDescription = "Logout",
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Logout")
-            }
-            
-            // Add bottom padding to ensure content doesn't go behind navigation bar
-            Spacer(modifier = Modifier.height(120.dp))
+            ProfileActionButton(
+                icon = Icons.Outlined.Info,
+                label = "About",
+                onClick = onNavigateToAbout
+            )
         }
+        
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        // Logout button
+        Button(
+            onClick = onLogout,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.error
+            )
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.Logout,
+                contentDescription = "Logout",
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Logout")
+        }
+        
+        // Add bottom padding to ensure content doesn't go behind navigation bar
+        Spacer(modifier = Modifier.height(120.dp))
     }
     
     // Photo Options Dialog
     if (showPhotoOptions) {
         AlertDialog(
-            onDismissRequest = { showPhotoOptions = false },
+            onDismissRequest = { onPhotoOptionsChange(false) },
             title = {
                 Text(
                     text = "Profile Photo",
@@ -259,7 +317,7 @@ fun ProfileScreen(
                 Button(
                     onClick = {
                         photoPickerLauncher.launch("image/*")
-                        showPhotoOptions = false
+                        onPhotoOptionsChange(false)
                     },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
@@ -279,8 +337,8 @@ fun ProfileScreen(
                     TextButton(
                         onClick = {
                             profilePhotoStorage.clearProfilePhoto()
-                            profilePhoto = null
-                            showPhotoOptions = false
+                            onProfilePhotoChange(null)
+                            onPhotoOptionsChange(false)
                         },
                         colors = ButtonDefaults.textButtonColors(
                             contentColor = MaterialTheme.colorScheme.error
@@ -289,7 +347,7 @@ fun ProfileScreen(
                         Text("Remove Photo")
                     }
                 } else {
-                    TextButton(onClick = { showPhotoOptions = false }) {
+                    TextButton(onClick = { onPhotoOptionsChange(false) }) {
                         Text("Cancel")
                     }
                 }
