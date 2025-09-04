@@ -6,6 +6,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,14 +17,28 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.graphics.vector.ImageVector
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.ui.unit.sp // Added for line height
+import android.content.Context
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import com.example.myapplication.data.ReportStorage
+import com.example.myapplication.models.WaterQualityReport
+
+data class PhotoItem(
+    val id: String,
+    val name: String,
+    val size: String,
+    val timestamp: Date = Date()
+)
 
 @Composable
 fun ReportIssueScreen() {
@@ -49,12 +66,64 @@ fun ReportIssueScreen() {
     // Additional notes
     var additionalNotes by remember { mutableStateOf("") }
     
+    // Photo upload state
+    val uploadedPhotos = remember { mutableStateListOf<PhotoItem>() }
+    var showPhotoPicker by remember { mutableStateOf(false) }
+    
     // UI state
     var isSubmitting by remember { mutableStateOf(false) }
     var showSuccess by remember { mutableStateOf(false) }
+    var showValidationError by remember { mutableStateOf(false) }
+    var validationMessage by remember { mutableStateOf("") }
     
     val scrollState = rememberScrollState()
     val currentDate = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
+    
+    // Form validation function
+    fun validateForm(): Boolean {
+        val requiredFields = listOf(
+            fullName to "Full Name",
+            email to "Email",
+            phone to "Phone Number",
+            waterSourceName to "Water Source Name",
+            sourceType to "Source Type",
+            location to "Location",
+            waterAppearance to "Water Appearance",
+            waterSmell to "Water Smell",
+            waterTaste to "Water Taste",
+            visibleParticles to "Visible Particles",
+            waterFlow to "Water Flow"
+        )
+        
+        val emptyFields = requiredFields.filter { it.first.isBlank() }
+        
+        if (emptyFields.isNotEmpty()) {
+            validationMessage = "Please fill in: ${emptyFields.joinToString(", ") { it.second }}"
+            showValidationError = true
+            return false
+        }
+        
+        // Email validation
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            validationMessage = "Please enter a valid email address"
+            showValidationError = true
+            return false
+        }
+        
+        // Phone validation (basic)
+        if (phone.length < 10) {
+            validationMessage = "Please enter a valid phone number (at least 10 digits)"
+            showValidationError = true
+            return false
+        }
+        
+        showValidationError = false
+        return true
+    }
+    
+    // Get context and report storage
+    val context = LocalContext.current
+    val reportStorage = remember { ReportStorage(context) }
     
     // Auto-populate date
     LaunchedEffect(Unit) {
@@ -81,14 +150,15 @@ fun ReportIssueScreen() {
             skinProblems = ""
             stomachProblems = ""
             additionalNotes = ""
+            uploadedPhotos.clear() // Clear uploaded photos
         }
     } else {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 20.dp) // Adjusted padding
+                .padding(horizontal = 16.dp, vertical = 12.dp) // Reduced vertical padding
                 .verticalScroll(scrollState),
-            verticalArrangement = Arrangement.spacedBy(20.dp) // Added consistent spacing
+            verticalArrangement = Arrangement.spacedBy(12.dp) // Reduced spacing between sections
         ) {
             // Header
             Row(
@@ -98,27 +168,25 @@ fun ReportIssueScreen() {
                 Icon(
                     imageVector = Icons.Outlined.Science,
                     contentDescription = "Water Quality Report",
-                    modifier = Modifier.size(36.dp), // Slightly larger icon
+                    modifier = Modifier.size(28.dp), // Reduced icon size
                     tint = MaterialTheme.colorScheme.primary
                 )
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(8.dp)) // Reduced spacing
                 Text(
                     text = "Water Quality Report",
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontWeight = FontWeight.Bold // Ensure bold is applied if not default in theme
+                    style = MaterialTheme.typography.titleLarge.copy( // Reduced from headlineMedium
+                        fontWeight = FontWeight.Bold
                     ),
                     color = MaterialTheme.colorScheme.primary
                 )
             }
-
-            // Spacer(modifier = Modifier.height(8.dp)) // Removed, handled by Column's spacedBy
             
             Text(
-                text = "Help protect your community by reporting water quality issues. Your detailed feedback is crucial.", // Slightly updated text
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    lineHeight = 20.sp // Added for better readability
+                text = "Report water quality issues to help protect your community.", // Shortened description
+                style = MaterialTheme.typography.bodySmall.copy( // Reduced from bodyMedium
+                    lineHeight = 16.sp // Reduced line height
                 ),
-                color = MaterialTheme.colorScheme.onSurfaceVariant // Softer color
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             // Spacer(modifier = Modifier.height(24.dp)) // Removed, handled by Column's spacedBy
@@ -295,7 +363,13 @@ fun ReportIssueScreen() {
                 title = "Upload Photos (Optional)",
                 subtitle = "Images can significantly help in assessing the issue."
             ) {
-                PhotoUploadSection()
+                PhotoUploadSection(
+                    uploadedPhotos = uploadedPhotos,
+                    onAddPhoto = { showPhotoPicker = true },
+                    onRemovePhoto = { photoId ->
+                        uploadedPhotos.removeAll { it.id == photoId }
+                    }
+                )
             }
 
             // Spacer(modifier = Modifier.height(24.dp)) // Removed, handled by Column's spacedBy
@@ -317,51 +391,200 @@ fun ReportIssueScreen() {
             
             // Spacer(modifier = Modifier.height(32.dp)) // Removed, handled by Column's spacedBy
 
-            // Submit Button
+            // Submit Button Section
             val coroutineScope = rememberCoroutineScope()
+            
+            // Form completion status
+            val isFormComplete = remember(
+                fullName, email, phone, waterSourceName, sourceType, location,
+                waterAppearance, waterSmell, waterTaste, visibleParticles, waterFlow
+            ) {
+                fullName.isNotBlank() && email.isNotBlank() && phone.isNotBlank() &&
+                waterSourceName.isNotBlank() && sourceType.isNotBlank() && location.isNotBlank() &&
+                waterAppearance.isNotBlank() && waterSmell.isNotBlank() && waterTaste.isNotBlank() &&
+                visibleParticles.isNotBlank() && waterFlow.isNotBlank()
+            }
+            
+            // Submit Button
             Button(
                 onClick = {
-                    isSubmitting = true
-                    // Simulate submission
-                    coroutineScope.launch {
-                        delay(2000)
-                        isSubmitting = false
-                        showSuccess = true
+                    if (validateForm()) {
+                        isSubmitting = true
+                        // Create and save the water quality report
+                        coroutineScope.launch {
+                            try {
+                                val report = WaterQualityReport(
+                                    fullName = fullName,
+                                    email = email,
+                                    phone = phone,
+                                    waterSourceName = waterSourceName,
+                                    sourceType = sourceType,
+                                    location = location,
+                                    coordinates = coordinates,
+                                    waterAppearance = waterAppearance,
+                                    waterSmell = waterSmell,
+                                    waterTaste = waterTaste,
+                                    visibleParticles = visibleParticles,
+                                    waterFlow = waterFlow,
+                                    generalHealthIssues = generalHealthIssues,
+                                    skinProblems = skinProblems,
+                                    stomachProblems = stomachProblems,
+                                    additionalNotes = additionalNotes,
+                                    photoCount = uploadedPhotos.size
+                                )
+                                
+                                val reportId = reportStorage.saveReport(report)
+                                delay(1000) // Brief delay for UX
+                                isSubmitting = false
+                                showSuccess = true
+                            } catch (e: Exception) {
+                                // Handle error
+                                validationMessage = "Failed to save report: ${e.message}"
+                                showValidationError = true
+                                isSubmitting = false
+                            }
+                        }
                     }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp), // Added vertical padding
-                enabled = !isSubmitting && fullName.isNotBlank() && email.isNotBlank() && // Used isNotBlank
-                         phone.isNotBlank() && waterSourceName.isNotBlank() &&
-                         sourceType.isNotBlank() && location.isNotBlank() &&
-                         waterAppearance.isNotBlank() && waterSmell.isNotBlank() &&
-                         waterTaste.isNotBlank() && visibleParticles.isNotBlank() &&
-                         waterFlow.isNotBlank(),
-                contentPadding = PaddingValues(vertical = 12.dp) // Increased button padding
+                    .padding(vertical = 4.dp), // Reduced padding
+                enabled = !isSubmitting && isFormComplete,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isFormComplete) 
+                        MaterialTheme.colorScheme.primary 
+                    else 
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                ),
+                contentPadding = PaddingValues(vertical = 12.dp, horizontal = 16.dp) // Reduced padding
             ) {
                 if (isSubmitting) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp), // Slightly larger indicator
+                        modifier = Modifier.size(24.dp),
                         color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp // Thinner stroke
+                        strokeWidth = 2.dp
                     )
-                    Spacer(modifier = Modifier.width(12.dp)) // Increased spacing
-                    Text("Submitting Report...")
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Submitting Report...",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium
+                    )
                 } else {
                     Icon(
-                        imageVector = Icons.Outlined.Send, // Changed Icon
+                        imageVector = Icons.Filled.Send,
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(24.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Submit Water Quality Report")
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Submit Water Quality Report",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+            
+            // Form Status Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isFormComplete) 
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                    else 
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ),
+                shape = RoundedCornerShape(6.dp) // Reduced corner radius
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp), // Reduced padding
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = if (isFormComplete) Icons.Filled.CheckCircle else Icons.Filled.Info,
+                        contentDescription = "Form Status",
+                        tint = if (isFormComplete) 
+                            MaterialTheme.colorScheme.primary 
+                        else 
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        modifier = Modifier.size(16.dp) // Reduced icon size
+                    )
+                    Spacer(modifier = Modifier.width(6.dp)) // Reduced spacing
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = if (isFormComplete) "Form Complete" else "Form Incomplete",
+                            style = MaterialTheme.typography.bodySmall, // Reduced from bodyMedium
+                            fontWeight = FontWeight.Medium,
+                            color = if (isFormComplete) 
+                                MaterialTheme.colorScheme.primary 
+                            else 
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                        Text(
+                            text = if (isFormComplete) 
+                                "Ready to submit${if (uploadedPhotos.isNotEmpty()) " with ${uploadedPhotos.size} photo(s)" else ""}"
+                            else 
+                                "Please fill in all required fields",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                    }
                 }
             }
 
             // Add bottom padding to ensure content doesn't go behind navigation bar
-            Spacer(modifier = Modifier.height(120.dp)) // Ensures submit button is visible above navigation bar
+            Spacer(modifier = Modifier.height(80.dp)) // Reduced from 120dp
         }
+    }
+
+    // Photo Picker Dialog
+    if (showPhotoPicker) {
+        PhotoPickerDialog(
+            onDismiss = { showPhotoPicker = false },
+            onPhotoSelected = { photoName, photoSize ->
+                val newPhoto = PhotoItem(
+                    id = UUID.randomUUID().toString(),
+                    name = photoName,
+                    size = photoSize
+                )
+                uploadedPhotos.add(newPhoto)
+                showPhotoPicker = false
+            }
+        )
+    }
+    
+    // Validation Error Dialog
+    if (showValidationError) {
+        AlertDialog(
+            onDismissRequest = { showValidationError = false },
+            title = {
+                Text(
+                    text = "Validation Error",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.error
+                )
+            },
+            text = {
+                Text(
+                    text = validationMessage,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showValidationError = false },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("OK")
+                }
+            }
+        )
     }
 }
 
@@ -382,28 +605,24 @@ private fun FormSection(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)) // Subtle border
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 20.dp), // Adjusted padding
-            verticalArrangement = Arrangement.spacedBy(16.dp) // Consistent spacing for content
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp), // Reduced padding
+            verticalArrangement = Arrangement.spacedBy(8.dp) // Reduced spacing
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleLarge, // Made title larger
-                // fontWeight = FontWeight.Bold, // TitleLarge might already be bold in theme
+                style = MaterialTheme.typography.titleMedium, // Reduced from titleLarge
+                fontWeight = FontWeight.Medium, // Reduced font weight
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            // Spacer(modifier = Modifier.height(4.dp)) // Removed, handled by Column's spacedBy
-
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodyMedium, // Used bodyMedium for subtitle
+                style = MaterialTheme.typography.bodySmall, // Reduced from bodyMedium
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                lineHeight = 18.sp // Added line height
+                lineHeight = 14.sp // Reduced line height
             )
 
-            // Spacer(modifier = Modifier.height(16.dp)) // Removed, handled by Column's spacedBy
-            // Adding a small spacer before the content for visual separation from subtitle
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp)) // Reduced spacer
             content()
         }
     }
@@ -740,87 +959,276 @@ private fun WaterFlowDropdown(
 }
 
 @Composable
-private fun PhotoUploadSection() {
-    Card(
+private fun PhotoUploadSection(
+    uploadedPhotos: List<PhotoItem>,
+    onAddPhoto: () -> Unit,
+    onRemovePhoto: (String) -> Unit
+) {
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f) // Lighter, distinct background
-        ),
-        shape = MaterialTheme.shapes.large, // More rounded corners
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondaryContainer) // Subtle border matching container
-            ) {
-                Column(
-                    modifier = Modifier
-                .padding(20.dp) // Increased padding
-                .fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp) // Spacing for inner elements
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Upload Button Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
+            ),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondaryContainer)
         ) {
-            Icon(
-                imageVector = Icons.Outlined.FileUpload, // Changed icon for more direct meaning
-                contentDescription = "Upload Photos",
-                modifier = Modifier.size(56.dp), // Larger icon
-                tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f) // Adjusted tint for contrast
-            )
+            Column(
+                modifier = Modifier
+                    .padding(12.dp) // Reduced from 20dp
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp) // Reduced from 12dp
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.FileUpload,
+                    contentDescription = "Upload Photos",
+                    modifier = Modifier.size(40.dp), // Reduced from 56dp
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                )
 
-            // Spacer(modifier = Modifier.height(8.dp)) // Handled by Column's spacedBy
+                Text(
+                    text = "Upload Photos",
+                    style = MaterialTheme.typography.bodyMedium, // Reduced from titleSmall
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
 
-            Text(
-                text = "Tap to Upload Photos", // Clearer call to action
-                style = MaterialTheme.typography.titleSmall, // More prominent text
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
-            )
+                Text(
+                    text = "JPG, PNG. Max 10MB per photo.", // Shortened text
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                )
 
-            // Spacer(modifier = Modifier.height(4.dp)) // Handled by Column's spacedBy
+                Button(
+                    onClick = onAddPhoto,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    ),
+                    shape = RoundedCornerShape(6.dp), // Reduced corner radius
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp) // Reduced padding
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Add,
+                        contentDescription = "Add Photo",
+                        modifier = Modifier.size(16.dp) // Reduced from 20dp
+                    )
+                    Spacer(modifier = Modifier.width(6.dp)) // Reduced spacing
+                    Text("Add Photos")
+                }
 
-            Text(
-                text = "Supports JPG, PNG. Max 10MB per photo.", // Simplified text
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
-            )
+                // Photo Suggestions
+                Text(
+                    text = "Suggestions:", // Shortened text
+                    style = MaterialTheme.typography.bodySmall, // Reduced from labelLarge
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
 
-            // Spacer(modifier = Modifier.height(12.dp)) // Handled by Column's spacedBy
+                val suggestions = listOf(
+                    "Water color",
+                    "Visible particles",
+                    "Water source",
+                    "Surrounding area"
+                ) // Shortened suggestions
 
-                    Text(
-                text = "Photo Suggestions:", // Simplified
-                style = MaterialTheme.typography.labelLarge, // More prominent label
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
-            )
-
-            // Spacer(modifier = Modifier.height(8.dp)) // Handled by Column's spacedBy
-
-            val suggestions = listOf(
-                "Color of the water", // Rephrased
-                "Any visible particles or cloudiness", // Rephrased
-                "The water source itself (tap, well, etc.)", // Rephrased
-                "Area around the water source if relevant" // Rephrased
-            )
-
-            Column(horizontalAlignment = Alignment.Start, modifier = Modifier.fillMaxWidth()) { // Align suggestions to start
-                suggestions.forEach { suggestion ->
-                    Row(
-                        modifier = Modifier.padding(vertical = 4.dp), // Increased vertical padding
+                Column(
+                    horizontalAlignment = Alignment.Start,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    suggestions.forEach { suggestion ->
+                        Row(
+                            modifier = Modifier.padding(vertical = 2.dp), // Reduced from 4dp
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                            imageVector = Icons.Outlined.PhotoCamera,
+                                imageVector = Icons.Outlined.PhotoCamera,
                                 contentDescription = null,
-                            modifier = Modifier.size(18.dp), // Slightly larger suggestion icon
-                            tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                                modifier = Modifier.size(14.dp), // Reduced from 18dp
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
                             )
-                        Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(6.dp)) // Reduced from 8dp
                             Text(
-                            text = suggestion,
-                            style = MaterialTheme.typography.bodyMedium, // Slightly larger suggestion text
-                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.9f)
-                        )
+                                text = suggestion,
+                                style = MaterialTheme.typography.bodySmall, // Reduced from bodyMedium
+                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.9f)
+                            )
+                        }
                     }
                 }
             }
         }
+
+        // Uploaded Photos Display
+        if (uploadedPhotos.isNotEmpty()) {
+            Text(
+                text = "Photos (${uploadedPhotos.size})", // Shortened text
+                style = MaterialTheme.typography.bodyMedium, // Reduced from titleMedium
+                fontWeight = FontWeight.Medium, // Reduced from Bold
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp), // Reduced from 12dp
+                contentPadding = PaddingValues(vertical = 4.dp) // Reduced from 8dp
+            ) {
+                items(uploadedPhotos) { photo ->
+                    PhotoCard(
+                        photo = photo,
+                        onRemove = { onRemovePhoto(photo.id) }
+                    )
+                }
+            }
+        }
     }
+}
+
+@Composable
+private fun PhotoCard(
+    photo: PhotoItem,
+    onRemove: () -> Unit
+) {
+    Card(
+        modifier = Modifier.size(100.dp), // Reduced from 120dp
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        shape = RoundedCornerShape(6.dp), // Reduced from 8dp
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // Photo placeholder (in real app, this would show actual image)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(6.dp), // Reduced from 8dp
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Photo,
+                    contentDescription = "Photo",
+                    modifier = Modifier.size(32.dp), // Reduced from 40dp
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(2.dp)) // Reduced from 4dp
+                Text(
+                    text = photo.name,
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1, // Reduced from 2
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = photo.size,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+            }
+
+            // Remove button
+            IconButton(
+                onClick = onRemove,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .size(20.dp) // Reduced from 24dp
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = "Remove Photo",
+                    modifier = Modifier.size(14.dp), // Reduced from 16dp
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PhotoPickerDialog(
+    onDismiss: () -> Unit,
+    onPhotoSelected: (String, String) -> Unit
+) {
+    val samplePhotos = listOf(
+        "water_source.jpg" to "2.3 MB",
+        "water_color.jpg" to "1.8 MB",
+        "particles.jpg" to "3.1 MB",
+        "tap_photo.jpg" to "2.7 MB",
+        "well_area.jpg" to "4.2 MB"
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Select Photos",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Choose photos to upload:",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                samplePhotos.forEach { (photoName, photoSize) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Photo,
+                            contentDescription = "Photo",
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = photoName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = photoSize,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            )
+                        }
+                        Button(
+                            onClick = { onPhotoSelected(photoName, photoSize) },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            ),
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text("Select")
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable
