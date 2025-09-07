@@ -22,165 +22,179 @@ fun HelpSupportScreen(
     var expandedFaq by remember { mutableStateOf<Int?>(null) }
     
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState())
+        modifier = Modifier.fillMaxSize()
     ) {
-        // Header
-        Row(
+        // Sticky Header
+        Surface(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            color = MaterialTheme.colorScheme.surface,
+            shadowElevation = 4.dp
         ) {
-            IconButton(onClick = onBackPressed) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                    contentDescription = "Back",
-                    modifier = Modifier.size(24.dp)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBackPressed) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                        contentDescription = "Back",
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Help & Support",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "Help & Support",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
         }
         
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        // Quick Actions
-        Text(
-            text = "Quick Actions",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        
-        Spacer(modifier = Modifier.height(12.dp))
-        
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        // Scrollable Content
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState())
         ) {
-            QuickActionCard(
-                icon = Icons.Outlined.Email,
-                title = "Email Support",
-                subtitle = "Send us an email",
-                modifier = Modifier.weight(1f),
-                onClick = { /* Handle email support */ }
+            // Quick Actions
+            Text(
+                text = "Quick Actions",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
             )
             
-            QuickActionCard(
-                icon = Icons.Outlined.Phone,
-                title = "Call Support",
-                subtitle = "Speak with us",
-                modifier = Modifier.weight(1f),
-                onClick = { /* Handle phone support */ }
-            )
-        }
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        // FAQ Section
-        Text(
-            text = "Frequently Asked Questions",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        
-        Spacer(modifier = Modifier.height(12.dp))
-        
-        val faqs = listOf(
-            FAQItem(
-                question = "How do I report a water quality issue?",
-                answer = "Go to the Report Issue screen, fill in all required fields including water source details, observations, and any photos. Submit the form and your report will be saved locally."
-            ),
-            FAQItem(
-                question = "What information should I include in my report?",
-                answer = "Include your contact details, water source location, visual observations (color, smell, taste), visible particles, and any health concerns. Photos are optional but helpful."
-            ),
-            FAQItem(
-                question = "How do I upload photos with my report?",
-                answer = "In the Report Issue screen, tap the 'Upload Photos' section and select photos from your gallery. You can upload multiple photos and remove them if needed."
-            ),
-            FAQItem(
-                question = "Can I edit my profile photo?",
-                answer = "Yes! In the Profile screen, tap on your profile photo to open options. You can choose a new photo from your gallery or remove the current one."
-            ),
-            FAQItem(
-                question = "How do I change my notification settings?",
-                answer = "Go to Settings from the Profile screen and adjust your notification preferences including push notifications and email alerts."
-            ),
-            FAQItem(
-                question = "Is my data secure?",
-                answer = "Yes, all your data is stored locally on your device using secure encryption. We don't collect or transmit your personal information."
-            )
-        )
-        
-        faqs.forEachIndexed { index, faq ->
-            FAQItem(
-                question = faq.question,
-                answer = faq.answer,
-                expanded = expandedFaq == index,
-                onToggle = { 
-                    expandedFaq = if (expandedFaq == index) null else index 
-                }
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        // Contact Information
-        Text(
-            text = "Contact Information",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        
-        Spacer(modifier = Modifier.height(12.dp))
-        
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-            )
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                ContactInfoItem(
+                QuickActionCard(
                     icon = Icons.Outlined.Email,
-                    title = "Email",
-                    value = "support@waterqualityapp.com"
+                    title = "Email Support",
+                    subtitle = "Send us an email",
+                    modifier = Modifier.weight(1f),
+                    onClick = { /* Handle email support */ }
                 )
                 
-                ContactInfoItem(
+                QuickActionCard(
                     icon = Icons.Outlined.Phone,
-                    title = "Phone",
-                    value = "+1 (555) 123-4567"
-                )
-                
-                ContactInfoItem(
-                    icon = Icons.Outlined.Schedule,
-                    title = "Support Hours",
-                    value = "Monday - Friday: 9:00 AM - 6:00 PM"
-                )
-                
-                ContactInfoItem(
-                    icon = Icons.Outlined.LocationOn,
-                    title = "Address",
-                    value = "123 Water Quality St, City, State 12345"
+                    title = "Call Support",
+                    subtitle = "Speak with us",
+                    modifier = Modifier.weight(1f),
+                    onClick = { /* Handle phone support */ }
                 )
             }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // FAQ Section
+            Text(
+                text = "Frequently Asked Questions",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            val faqs = listOf(
+                FAQItem(
+                    question = "How do I report a water quality issue?",
+                    answer = "Go to the Report Issue screen, fill in all required fields including water source details, observations, and any photos. Submit the form and your report will be saved locally."
+                ),
+                FAQItem(
+                    question = "What information should I include in my report?",
+                    answer = "Include your contact details, water source location, visual observations (color, smell, taste), visible particles, and any health concerns. Photos are optional but helpful."
+                ),
+                FAQItem(
+                    question = "How do I upload photos with my report?",
+                    answer = "In the Report Issue screen, tap the 'Upload Photos' section and select photos from your gallery. You can upload multiple photos and remove them if needed."
+                ),
+                FAQItem(
+                    question = "Can I edit my profile photo?",
+                    answer = "Yes! In the Profile screen, tap on your profile photo to open options. You can choose a new photo from your gallery or remove the current one."
+                ),
+                FAQItem(
+                    question = "How do I change my notification settings?",
+                    answer = "Go to Settings from the Profile screen and adjust your notification preferences including push notifications and email alerts."
+                ),
+                FAQItem(
+                    question = "Is my data secure?",
+                    answer = "Yes, all your data is stored locally on your device using secure encryption. We don't collect or transmit your personal information."
+                )
+            )
+            
+            faqs.forEachIndexed { index, faq ->
+                FAQItem(
+                    question = faq.question,
+                    answer = faq.answer,
+                    expanded = expandedFaq == index,
+                    onToggle = { 
+                        expandedFaq = if (expandedFaq == index) null else index 
+                    }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Contact Information
+            Text(
+                text = "Contact Information",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    ContactInfoItem(
+                        icon = Icons.Outlined.Email,
+                        title = "Email",
+                        value = "support@waterqualityapp.com"
+                    )
+                    
+                    ContactInfoItem(
+                        icon = Icons.Outlined.Phone,
+                        title = "Phone",
+                        value = "+1 (555) 123-4567"
+                    )
+                    
+                    ContactInfoItem(
+                        icon = Icons.Outlined.Schedule,
+                        title = "Support Hours",
+                        value = "Monday - Friday: 9:00 AM - 6:00 PM"
+                    )
+                    
+                    ContactInfoItem(
+                        icon = Icons.Outlined.LocationOn,
+                        title = "Address",
+                        value = "123 Water Quality St, City, State 12345"
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            // Add bottom padding to prevent content from being hidden behind bottom navigation
+            Spacer(modifier = Modifier.height(120.dp))
         }
-        
-        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 

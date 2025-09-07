@@ -394,6 +394,9 @@ fun ReportIssueScreen() {
             // Submit Button Section
             val coroutineScope = rememberCoroutineScope()
             
+            // Add bottom padding to prevent content from being hidden behind bottom navigation
+            Spacer(modifier = Modifier.height(120.dp))
+            
             // Form completion status
             val isFormComplete = remember(
                 fullName, email, phone, waterSourceName, sourceType, location,

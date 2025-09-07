@@ -10,7 +10,8 @@ import kotlinx.coroutines.withContext
 data class User(
     val fullName: String,
     val mobileNumber: String,
-    val password: String
+    val password: String,
+    val email: String = ""
 )
 
 class AuthManager(private val context: Context) {
@@ -27,7 +28,7 @@ class AuthManager(private val context: Context) {
         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
     )
     
-    suspend fun registerUser(fullName: String, mobileNumber: String, password: String): AuthResult {
+    suspend fun registerUser(fullName: String, mobileNumber: String, password: String, email: String = ""): AuthResult {
         return withContext(Dispatchers.IO) {
             try {
                 // Validate input
@@ -50,7 +51,7 @@ class AuthManager(private val context: Context) {
                 }
                 
                 // Save user data
-                val user = User(fullName, mobileNumber, password)
+                val user = User(fullName, mobileNumber, password, email)
                 saveUser(user)
                 
                 AuthResult.Success("Registration successful!")
@@ -95,6 +96,7 @@ class AuthManager(private val context: Context) {
             .putString("${userKey}_name", user.fullName)
             .putString("${userKey}_mobile", user.mobileNumber)
             .putString("${userKey}_password", user.password)
+            .putString("${userKey}_email", user.email)
             .apply()
     }
     
@@ -103,9 +105,10 @@ class AuthManager(private val context: Context) {
         val name = encryptedPrefs.getString("${userKey}_name", null)
         val mobile = encryptedPrefs.getString("${userKey}_mobile", null)
         val password = encryptedPrefs.getString("${userKey}_password", null)
+        val email = encryptedPrefs.getString("${userKey}_email", "")
         
         return if (name != null && mobile != null && password != null) {
-            User(name, mobile, password)
+            User(name, mobile, password, email ?: "")
         } else null
     }
     
@@ -121,7 +124,9 @@ class AuthManager(private val context: Context) {
         val mobile = encryptedPrefs.getString("current_user_mobile", null)
         
         return if (name != null && mobile != null) {
-            User(name, mobile, "") // Don't return password for security
+            // Get full user data including email
+            val fullUser = getUserByMobile(mobile)
+            User(name, mobile, "", fullUser?.email ?: "") // Don't return password for security
         } else null
     }
     
@@ -135,7 +140,150 @@ class AuthManager(private val context: Context) {
     fun isLoggedIn(): Boolean {
         return getCurrentUser() != null
     }
+    
+    suspend fun changePassword(oldPassword: String, newPassword: String): AuthResult {
+        return withContext(Dispatchers.IO) {
+            try {
+                // Get current user
+                val currentUser = getCurrentUser()
+                if (currentUser == null) {
+                    return@withContext AuthResult.Error("No user logged in")
+                }
+                
+                // Get full user data including password
+                val fullUser = getUserByMobile(currentUser.mobileNumber)
+                if (fullUser == null) {
+                    return@withContext AuthResult.Error("User data not found")
+                }
+                
+                // Validate old password
+                if (fullUser.password != oldPassword) {
+                    return@withContext AuthResult.Error("Current password is incorrect")
+                }
+                
+                // Validate new password
+                val passwordValidation = validatePassword(newPassword)
+                if (!passwordValidation.isValid) {
+                    return@withContext AuthResult.Error(passwordValidation.errorMessage)
+                }
+                
+                // Update password
+                val updatedUser = fullUser.copy(password = newPassword)
+                saveUser(updatedUser)
+                
+                AuthResult.Success("Password changed successfully!")
+            } catch (e: Exception) {
+                AuthResult.Error("Password change failed: ${e.message}")
+            }
+        }
+    }
+    
+    private fun validatePassword(password: String): PasswordValidation {
+        if (password.length < 8) {
+            return PasswordValidation(false, "Password must be at least 8 characters long")
+        }
+        
+        if (!password.any { it.isDigit() }) {
+            return PasswordValidation(false, "Password must contain at least one number")
+        }
+        
+        if (!password.any { it.isLetter() }) {
+            return PasswordValidation(false, "Password must contain at least one letter")
+        }
+        
+        val specialChars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
+        if (!password.any { it in specialChars }) {
+            return PasswordValidation(false, "Password must contain at least one special character")
+        }
+        
+        return PasswordValidation(true, "")
+    }
+    
+    suspend fun updateProfile(
+        newName: String, 
+        newMobileNumber: String, 
+        newEmail: String
+    ): AuthResult {
+        return withContext(Dispatchers.IO) {
+            try {
+                // Get current user
+                val currentUser = getCurrentUser()
+                if (currentUser == null) {
+                    return@withContext AuthResult.Error("No user logged in")
+                }
+                
+                // Get full user data including password
+                val fullUser = getUserByMobile(currentUser.mobileNumber)
+                if (fullUser == null) {
+                    return@withContext AuthResult.Error("User data not found")
+                }
+                
+                // Validate input
+                if (newName.isBlank()) {
+                    return@withContext AuthResult.Error("Name cannot be empty")
+                }
+                
+                if (newMobileNumber.isBlank()) {
+                    return@withContext AuthResult.Error("Mobile number cannot be empty")
+                }
+                
+                // Check if mobile number is being changed
+                val isMobileNumberChanged = newMobileNumber != currentUser.mobileNumber
+                
+                // If mobile number is changed, check if new mobile number already exists
+                if (isMobileNumberChanged) {
+                    val existingUser = getUserByMobile(newMobileNumber)
+                    if (existingUser != null) {
+                        return@withContext AuthResult.Error("Mobile number already exists")
+                    }
+                }
+                
+                // Validate email format if provided
+                if (newEmail.isNotBlank() && !isValidEmail(newEmail)) {
+                    return@withContext AuthResult.Error("Please enter a valid email address")
+                }
+                
+                // If mobile number changed, we need to migrate user data
+                if (isMobileNumberChanged) {
+                    // Remove old user data
+                    val oldUserKey = "user_${currentUser.mobileNumber}"
+                    encryptedPrefs.edit()
+                        .remove("${oldUserKey}_name")
+                        .remove("${oldUserKey}_mobile")
+                        .remove("${oldUserKey}_password")
+                        .remove("${oldUserKey}_email")
+                        .apply()
+                }
+                
+                // Create updated user
+                val updatedUser = fullUser.copy(
+                    fullName = newName,
+                    mobileNumber = newMobileNumber,
+                    email = newEmail
+                )
+                
+                // Save updated user
+                saveUser(updatedUser)
+                
+                // Update current user session
+                setCurrentUser(updatedUser)
+                
+                AuthResult.Success("Profile updated successfully!")
+            } catch (e: Exception) {
+                AuthResult.Error("Profile update failed: ${e.message}")
+            }
+        }
+    }
+    
+    private fun isValidEmail(email: String): Boolean {
+        return android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
+    }
 }
+
+data class PasswordValidation(
+    val isValid: Boolean,
+    val errorMessage: String
+)
 
 sealed class AuthResult {
     data class Success(val message: String) : AuthResult()

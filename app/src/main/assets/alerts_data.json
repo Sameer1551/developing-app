@@ -1,0 +1,338 @@
+{
+  "alerts": [
+    {
+      "id": "1",
+      "title": "Water Contamination in Imphal East",
+      "description": "Residents reporting foul smell and discolored water in multiple households. Suspected sewage contamination.",
+      "type": "Water Quality",
+      "priority": "Critical",
+      "status": "Active",
+      "district": "Imphal East",
+      "location": "Lamphelpat area, near NIT campus",
+      "reporter": "Dr. Rajesh Kumar",
+      "reporterContact": "+91 98765 43210",
+      "createdAt": "2024-01-15 08:30",
+      "updatedAt": "2024-01-15 14:20",
+      "assignedTo": "Water Quality Team",
+      "responseTime": "2 hours",
+      "notes": [
+        "Initial assessment completed",
+        "Water samples collected for testing",
+        "Temporary water supply arranged"
+      ],
+      "attachments": [
+        "water_sample_001.jpg",
+        "location_map.pdf"
+      ]
+    },
+    {
+      "id": "2",
+      "title": "Dengue Outbreak in Senapati",
+      "description": "Multiple cases of dengue fever reported in Senapati district. Need immediate vector control measures.",
+      "type": "Disease Outbreak",
+      "priority": "High",
+      "status": "In Progress",
+      "district": "Senapati",
+      "location": "Senapati town and surrounding villages",
+      "reporter": "Priya Sharma",
+      "reporterContact": "+91 87654 32109",
+      "createdAt": "2024-01-14 16:45",
+      "updatedAt": "2024-01-15 10:15",
+      "assignedTo": "Vector Control Team",
+      "responseTime": "4 hours",
+      "notes": [
+        "Fogging operations initiated",
+        "Public awareness campaign started",
+        "Medical teams deployed"
+      ],
+      "attachments": [
+        "case_report.pdf",
+        "fogging_schedule.xlsx"
+      ]
+    },
+    {
+      "id": "3",
+      "title": "Hospital Power Outage",
+      "description": "District hospital experiencing intermittent power supply. Affecting critical medical equipment.",
+      "type": "Infrastructure",
+      "priority": "High",
+      "status": "Resolved",
+      "district": "Bishnupur",
+      "location": "Bishnupur District Hospital",
+      "reporter": "Amit Patel",
+      "reporterContact": "+91 76543 21098",
+      "createdAt": "2024-01-13 22:15",
+      "updatedAt": "2024-01-14 06:30",
+      "assignedTo": "Infrastructure Team",
+      "responseTime": "1 hour",
+      "notes": [
+        "Generator backup activated",
+        "Power restored at 06:30",
+        "Equipment checked and functional"
+      ],
+      "attachments": [
+        "power_log.pdf",
+        "equipment_status.pdf"
+      ]
+    },
+    {
+      "id": "4",
+      "title": "Heavy Rainfall Alert",
+      "description": "IMD warning for heavy rainfall in next 48 hours. Risk of flooding in low-lying areas.",
+      "type": "Weather",
+      "priority": "Medium",
+      "status": "Active",
+      "district": "All Districts",
+      "location": "Northeast India region",
+      "reporter": "Weather Department",
+      "reporterContact": "weather@imd.gov.in",
+      "createdAt": "2024-01-15 12:00",
+      "updatedAt": "2024-01-15 12:00",
+      "assignedTo": "Disaster Management Team",
+      "responseTime": "30 minutes",
+      "notes": [
+        "Public advisory issued",
+        "Emergency response teams on standby",
+        "Shelter locations identified"
+      ],
+      "attachments": [
+        "weather_forecast.pdf",
+        "emergency_plan.pdf"
+      ]
+    },
+    {
+      "id": "5",
+      "title": "Food Poisoning Incident",
+      "description": "Multiple cases of food poisoning reported after community feast. Need immediate investigation.",
+      "type": "Health Emergency",
+      "priority": "Critical",
+      "status": "In Progress",
+      "district": "Churachandpur",
+      "location": "Churachandpur town market area",
+      "reporter": "Dr. Meena Devi",
+      "reporterContact": "+91 65432 10987",
+      "createdAt": "2024-01-15 19:20",
+      "updatedAt": "2024-01-15 20:45",
+      "assignedTo": "Food Safety Team",
+      "responseTime": "1 hour",
+      "notes": [
+        "Food samples collected",
+        "Affected individuals identified",
+        "Medical treatment provided"
+      ],
+      "attachments": [
+        "food_sample_001.jpg",
+        "medical_report.pdf"
+      ]
+    }
+  ],
+  "usersByDistrict": {
+    "Tirap": [
+      {
+        "id": "1756750067489",
+        "name": "aas",
+        "email": "aas@gmail.com",
+        "phone": "9988775566",
+        "role": "Admin",
+        "status": "Active",
+        "state": "Arunachal Pradesh",
+        "originalRole": "Administrator"
+      }
+    ],
+    "Phek": [
+      {
+        "id": "1756751349872",
+        "name": "aad",
+        "email": "aad@gmail.com",
+        "phone": "9988774455",
+        "role": "Admin",
+        "status": "Active",
+        "state": "Nagaland",
+        "originalRole": "Administrator"
+      }
+    ],
+    "Shi Yomi": [
+      {
+        "id": "1756751433096",
+        "name": "kkl",
+        "email": "kkl@gmail.com",
+        "phone": "2233665544",
+        "role": "Health Officer",
+        "status": "Active",
+        "state": "Arunachal Pradesh",
+        "originalRole": "Health Worker"
+      }
+    ],
+    "Baksa": [
+      {
+        "id": "1756752000001",
+        "name": "Amit Patel",
+        "email": "amit.patel@health.gov.in",
+        "phone": "7654321098",
+        "role": "Admin",
+        "status": "Active",
+        "state": "Assam",
+        "originalRole": "Administrator"
+      }
+    ],
+    "Bishnupur": [
+      {
+        "id": "1756752000002",
+        "name": "Dr. Arjun Mehta",
+        "email": "arjun.mehta@health.gov.in",
+        "phone": "2109876543",
+        "role": "Admin",
+        "status": "Active",
+        "state": "Manipur",
+        "originalRole": "Administrator"
+      }
+    ],
+    "East Garo Hills": [
+      {
+        "id": "1756752000003",
+        "name": "Dr. Rajesh Kumar",
+        "email": "rajesh.kumar@health.gov.in",
+        "phone": "9876543210",
+        "role": "Health Officer",
+        "status": "Active",
+        "state": "Meghalaya",
+        "originalRole": "Health Worker"
+      }
+    ],
+    "Aizawl": [
+      {
+        "id": "1756752000004",
+        "name": "Dr. Meena Devi",
+        "email": "meena.devi@health.gov.in",
+        "phone": "6543210987",
+        "role": "Health Officer",
+        "status": "Active",
+        "state": "Mizoram",
+        "originalRole": "Health Worker"
+      },
+      {
+        "id": "1756753000001",
+        "name": "SV",
+        "email": "SV@gmail.com",
+        "phone": "9966332255",
+        "role": "Government Officials",
+        "status": "Active",
+        "state": "Mizoram",
+        "originalRole": "Government Officials"
+      },
+      {
+        "id": "1756875092410",
+        "name": "Test User",
+        "email": "test@example.com",
+        "phone": "1234567890",
+        "role": "Government Officials",
+        "status": "Active",
+        "state": "Mizoram",
+        "originalRole": "Government Officials"
+      }
+    ],
+    "Dimapur": [
+      {
+        "id": "1756752000005",
+        "name": "Dr. Sanjay Verma",
+        "email": "sanjay.verma@health.gov.in",
+        "phone": "4321098765",
+        "role": "Health Officer",
+        "status": "Active",
+        "state": "Nagaland",
+        "originalRole": "Health Worker"
+      }
+    ],
+    "Dhalai": [
+      {
+        "id": "1756752000006",
+        "name": "Priya Sharma",
+        "email": "priya.sharma@health.gov.in",
+        "phone": "8765432109",
+        "role": "Staff",
+        "status": "Active",
+        "state": "Tripura",
+        "originalRole": "Staff"
+      }
+    ],
+    "Changlang": [
+      {
+        "id": "1756752000007",
+        "name": "Rahul Singh",
+        "email": "rahul.singh@health.gov.in",
+        "phone": "5432109876",
+        "role": "Staff",
+        "status": "Active",
+        "state": "Arunachal Pradesh",
+        "originalRole": "Staff"
+      }
+    ],
+    "Cachar": [
+      {
+        "id": "1756752000008",
+        "name": "Kavita Reddy",
+        "email": "kavita.reddy@health.gov.in",
+        "phone": "3210987654",
+        "role": "Staff",
+        "status": "Active",
+        "state": "Assam",
+        "originalRole": "Staff"
+      }
+    ]
+  },
+  "metadata": {
+    "totalAlerts": 5,
+    "totalUsers": 14,
+    "alertTypes": [
+      "Health Emergency",
+      "Water Quality", 
+      "Disease Outbreak",
+      "Infrastructure",
+      "Weather"
+    ],
+    "priorities": [
+      "Critical",
+      "High",
+      "Medium",
+      "Low"
+    ],
+    "statuses": [
+      "Active",
+      "In Progress",
+      "Resolved",
+      "Closed"
+    ],
+    "districts": [
+      "Imphal East",
+      "Senapati",
+      "Bishnupur",
+      "All Districts",
+      "Churachandpur"
+    ],
+    "userRoles": [
+      "Admin",
+      "Health Officer",
+      "Staff",
+      "Government Officials"
+    ],
+    "userDistricts": [
+      "Tirap",
+      "Phek",
+      "Shi Yomi",
+      "Baksa",
+      "Bishnupur",
+      "East Garo Hills",
+      "Aizawl",
+      "Dimapur",
+      "Dhalai",
+      "Changlang",
+      "Cachar"
+    ],
+    "extractedFrom": "AlertManagementTab.tsx and UserManagementTab.tsx",
+    "extractionDate": "2024-01-15",
+    "dataSources": [
+      "AlertManagementTab.tsx (mock alerts data)",
+      "Data-UAD/DATAUAD.json (user data)"
+    ]
+  }
+}

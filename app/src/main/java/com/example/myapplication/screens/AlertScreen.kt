@@ -1,5 +1,9 @@
 package com.example.myapplication.screens
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,13 +13,20 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.example.myapplication.data.AlertDataLoader
+import com.example.myapplication.models.*
+import com.example.myapplication.utils.LanguageManager
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -37,53 +48,41 @@ enum class AlertType(val icon: ImageVector, val color: androidx.compose.ui.graph
 }
 
 @Composable
-fun AlertScreen() {
-    val alerts = remember {
-        mutableStateListOf(
-            Alert(
-                id = "1",
-                title = "Water Quality Alert",
-                message = "High levels of contaminants detected in Sector 5. Please avoid drinking tap water.",
-                type = AlertType.EMERGENCY,
-                timestamp = Date(System.currentTimeMillis() - 2 * 60 * 60 * 1000), // 2 hours ago
-                location = "Sector 5"
-            ),
-            Alert(
-                id = "2",
-                title = "Maintenance Notice",
-                message = "Scheduled maintenance in your area. Water supply may be interrupted for 2 hours.",
-                type = AlertType.WARNING,
-                timestamp = Date(System.currentTimeMillis() - 6 * 60 * 60 * 1000), // 6 hours ago
-                location = "Your Area"
-            ),
-            Alert(
-                id = "3",
-                title = "Quality Check Complete",
-                message = "Routine water quality assessment completed. All parameters within safe limits.",
-                type = AlertType.SUCCESS,
-                timestamp = Date(System.currentTimeMillis() - 24 * 60 * 60 * 1000), // 1 day ago
-                location = "City Wide"
-            ),
-            Alert(
-                id = "4",
-                title = "New Guidelines",
-                message = "Updated water conservation guidelines are now available. Check the latest recommendations.",
-                type = AlertType.INFO,
-                timestamp = Date(System.currentTimeMillis() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-                location = "All Areas"
-            )
-        )
-    }
-
+fun AlertScreen(languageManager: LanguageManager) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    
+    // State for dynamic data
+    var alertData by remember { mutableStateOf<List<AlertData>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    
+    // State for expandable details
+    var expandedAlertId by remember { mutableStateOf<String?>(null) }
+    
     // Filter state
     val selectedFilter = remember { mutableStateOf(AlertFilter.ALL) }
     
+    // Load data on first composition
+    LaunchedEffect(Unit) {
+        val loader = AlertDataLoader(context)
+        loader.loadAlertData()
+            .onSuccess { response ->
+                alertData = response.alerts
+                isLoading = false
+            }
+            .onFailure { error ->
+                errorMessage = error.message
+                isLoading = false
+            }
+    }
+    
     // Filtered alerts based on selected filter
-    val filteredAlerts = remember(selectedFilter.value, alerts) {
+    val filteredAlerts = remember(selectedFilter.value, alertData) {
         when (selectedFilter.value) {
-            AlertFilter.ALL -> alerts
-            AlertFilter.EMERGENCY -> alerts.filter { it.type == AlertType.EMERGENCY }
-            AlertFilter.WARNING -> alerts.filter { it.type == AlertType.WARNING }
+            AlertFilter.ALL -> alertData
+            AlertFilter.EMERGENCY -> alertData.filter { it.priority.toAlertPriority() == AlertPriority.CRITICAL }
+            AlertFilter.WARNING -> alertData.filter { it.priority.toAlertPriority() == AlertPriority.HIGH }
         }
     }
 
@@ -95,39 +94,91 @@ fun AlertScreen() {
     ) {
         item {
             // Header Section
-            AlertHeaderSection(filteredAlerts.size)
+            AlertHeaderSection(filteredAlerts.size, languageManager)
             
             Spacer(modifier = Modifier.height(24.dp))
         }
         
-        item {
-            // Quick Stats Section
-            AlertStatsSection(alerts)
-            
-            Spacer(modifier = Modifier.height(24.dp))
-        }
-        
-        item {
-            // Filter Section
-            AlertFilterSection(
-                selectedFilter = selectedFilter.value,
-                onFilterSelected = { filter ->
-                    selectedFilter.value = filter
+        when {
+            isLoading -> {
+                item {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
                 }
-            )
+            }
             
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-        
-        // Filtered Alerts List
-        items(filteredAlerts) { alert ->
-            AlertCard(alert = alert)
-            Spacer(modifier = Modifier.height(12.dp))
+            errorMessage != null -> {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Error,
+                                contentDescription = "Error",
+                                tint = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = errorMessage ?: "Unknown error",
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+            }
+            
+            else -> {
+                item {
+                    // Quick Stats Section
+                    AlertStatsSection(alertData, languageManager)
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+                
+                item {
+                    // Filter Section
+                    AlertFilterSection(
+                        selectedFilter = selectedFilter.value,
+                        languageManager = languageManager,
+                        onFilterSelected = { filter ->
+                            selectedFilter.value = filter
+                        }
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+                
+                // Filtered Alerts List
+                items(filteredAlerts) { alert ->
+                    AlertCardWithDetails(
+                        alert = alert,
+                        languageManager = languageManager,
+                        isExpanded = expandedAlertId == alert.id,
+                        onToggleExpanded = { alertId ->
+                            expandedAlertId = if (expandedAlertId == alertId) null else alertId
+                        }
+                    )
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+            }
         }
         
         item {
             // Settings Section
-            AlertSettingsSection()
+            AlertSettingsSection(languageManager)
             
             Spacer(modifier = Modifier.height(24.dp))
         }
@@ -139,7 +190,7 @@ enum class AlertFilter {
 }
 
 @Composable
-fun AlertHeaderSection(alertCount: Int) {
+fun AlertHeaderSection(alertCount: Int, languageManager: LanguageManager) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -177,13 +228,13 @@ fun AlertHeaderSection(alertCount: Int) {
             // Header Info
             Column {
                 Text(
-                    text = "Alerts",
+                    text = languageManager.getLocalizedString("alerts"),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 Text(
-                    text = "$alertCount active notifications",
+                    text = "$alertCount ${languageManager.getLocalizedString("active_notifications")}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                 )
@@ -193,10 +244,10 @@ fun AlertHeaderSection(alertCount: Int) {
 }
 
 @Composable
-fun AlertStatsSection(alerts: List<Alert>) {
+fun AlertStatsSection(alerts: List<AlertData>, languageManager: LanguageManager) {
     Column {
         Text(
-            text = "Alert Overview",
+            text = languageManager.getLocalizedString("alert_overview"),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
@@ -208,17 +259,17 @@ fun AlertStatsSection(alerts: List<Alert>) {
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             AlertStatCard(
-                title = "Emergency",
-                value = alerts.count { it.type == AlertType.EMERGENCY }.toString(),
+                title = languageManager.getLocalizedString("emergency"),
+                value = alerts.count { it.priority.toAlertPriority() == AlertPriority.CRITICAL }.toString(),
                 icon = Icons.Filled.Warning,
-                color = AlertType.EMERGENCY.color,
+                color = AlertPriority.CRITICAL.color,
                 modifier = Modifier.weight(1f)
             )
             AlertStatCard(
-                title = "Warnings",
-                value = alerts.count { it.type == AlertType.WARNING }.toString(),
+                title = languageManager.getLocalizedString("warnings"),
+                value = alerts.count { it.priority.toAlertPriority() == AlertPriority.HIGH }.toString(),
                 icon = Icons.Filled.Info,
-                color = AlertType.WARNING.color,
+                color = AlertPriority.HIGH.color,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -230,17 +281,17 @@ fun AlertStatsSection(alerts: List<Alert>) {
             horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
             AlertStatCard(
-                title = "Info",
-                value = alerts.count { it.type == AlertType.INFO }.toString(),
+                title = languageManager.getLocalizedString("info"),
+                value = alerts.count { it.priority.toAlertPriority() == AlertPriority.MEDIUM }.toString(),
                 icon = Icons.Filled.Notifications,
-                color = AlertType.INFO.color,
+                color = AlertPriority.MEDIUM.color,
                 modifier = Modifier.weight(1f)
             )
             AlertStatCard(
-                title = "Resolved",
-                value = alerts.count { it.type == AlertType.SUCCESS }.toString(),
+                title = languageManager.getLocalizedString("resolved"),
+                value = alerts.count { it.status.toAlertStatus() == AlertStatus.RESOLVED }.toString(),
                 icon = Icons.Filled.CheckCircle,
-                color = AlertType.SUCCESS.color,
+                color = AlertStatus.RESOLVED.color,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -295,11 +346,12 @@ fun AlertStatCard(
 @Composable
 fun AlertFilterSection(
     selectedFilter: AlertFilter,
+    languageManager: LanguageManager,
     onFilterSelected: (AlertFilter) -> Unit
 ) {
     Column {
         Text(
-            text = "Alert Filter",
+            text = languageManager.getLocalizedString("alert_filter"),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
@@ -312,19 +364,19 @@ fun AlertFilterSection(
         ) {
             FilterChip(
                 onClick = { onFilterSelected(AlertFilter.ALL) },
-                label = { Text("All") },
+                label = { Text(languageManager.getLocalizedString("all")) },
                 selected = selectedFilter == AlertFilter.ALL,
                 modifier = Modifier.weight(1f)
             )
             FilterChip(
                 onClick = { onFilterSelected(AlertFilter.EMERGENCY) },
-                label = { Text("Emergency") },
+                label = { Text(languageManager.getLocalizedString("emergency")) },
                 selected = selectedFilter == AlertFilter.EMERGENCY,
                 modifier = Modifier.weight(1f)
             )
             FilterChip(
                 onClick = { onFilterSelected(AlertFilter.WARNING) },
-                label = { Text("Warnings") },
+                label = { Text(languageManager.getLocalizedString("warnings")) },
                 selected = selectedFilter == AlertFilter.WARNING,
                 modifier = Modifier.weight(1f)
             )
@@ -333,7 +385,7 @@ fun AlertFilterSection(
 }
 
 @Composable
-fun AlertCard(alert: Alert) {
+fun AlertCard(alert: Alert, languageManager: LanguageManager) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -376,7 +428,7 @@ fun AlertCard(alert: Alert) {
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = formatTimeAgo(alert.timestamp),
+                        text = formatTimeAgo(alert.timestamp, languageManager),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )
@@ -414,7 +466,7 @@ fun AlertCard(alert: Alert) {
 }
 
 @Composable
-fun AlertSettingsSection() {
+fun AlertSettingsSection(languageManager: LanguageManager) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -428,7 +480,7 @@ fun AlertSettingsSection() {
                 .padding(16.dp)
         ) {
             Text(
-                text = "Alert Settings",
+                text = languageManager.getLocalizedString("alert_settings"),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -452,7 +504,7 @@ fun AlertSettingsSection() {
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Push Notifications",
+                        text = languageManager.getLocalizedString("push_notifications"),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
@@ -485,7 +537,7 @@ fun AlertSettingsSection() {
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Email Alerts",
+                        text = languageManager.getLocalizedString("email_alerts"),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
@@ -503,16 +555,338 @@ fun AlertSettingsSection() {
     }
 }
 
-fun formatTimeAgo(date: Date): String {
+fun formatTimeAgo(date: Date, languageManager: LanguageManager): String {
     val now = Date()
     val diffInMillis = now.time - date.time
     val diffInHours = diffInMillis / (1000 * 60 * 60)
     val diffInDays = diffInHours / 24
     
     return when {
-        diffInHours < 1 -> "Just now"
-        diffInHours < 24 -> "${diffInHours}h ago"
-        diffInDays < 7 -> "${diffInDays}d ago"
+        diffInHours < 1 -> languageManager.getLocalizedString("just_now")
+        diffInHours < 24 -> "${diffInHours}${languageManager.getLocalizedString("hours_ago")}"
+        diffInDays < 7 -> "${diffInDays}${languageManager.getLocalizedString("days_ago")}"
         else -> SimpleDateFormat("MMM dd", Locale.getDefault()).format(date)
+    }
+}
+
+@Composable
+fun AlertCardWithDetails(
+    alert: AlertData,
+    languageManager: LanguageManager,
+    isExpanded: Boolean,
+    onToggleExpanded: (String) -> Unit
+) {
+    val alertType = alert.type.toAlertType()
+    val alertPriority = alert.priority.toAlertPriority()
+    val alertStatus = alert.status.toAlertStatus()
+    
+    Column {
+        // Main Alert Card
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onToggleExpanded(alert.id) },
+            colors = CardDefaults.cardColors(
+                containerColor = if (alertStatus == AlertStatus.RESOLVED) 
+                    MaterialTheme.colorScheme.surfaceVariant
+                else 
+                    alertPriority.color.copy(alpha = 0.05f)
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Alert Icon
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(alertPriority.color.copy(alpha = 0.1f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = alertType.icon,
+                        contentDescription = alertType.displayName,
+                        tint = alertPriority.color,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                
+                Spacer(modifier = Modifier.width(16.dp))
+                
+                // Alert Content
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = alert.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    
+                    Spacer(modifier = Modifier.height(4.dp))
+                    
+                    Text(
+                        text = alert.description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Priority Badge
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = alertPriority.color.copy(alpha = 0.1f)
+                        ) {
+                            Text(
+                                text = alertPriority.displayName,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = alertPriority.color,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.width(8.dp))
+                        
+                        // Status Badge
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = alertStatus.color.copy(alpha = 0.1f)
+                        ) {
+                            Text(
+                                text = alertStatus.displayName,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = alertStatus.color,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.weight(1f))
+                        
+                        // Expand/Collapse Icon
+                        Icon(
+                            imageVector = if (isExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                            contentDescription = if (isExpanded) "Collapse" else "Expand",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+        
+        // Expandable Details Section
+        AnimatedVisibility(
+            visible = isExpanded,
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut()
+        ) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        text = languageManager.getLocalizedString("alert_details"),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Details Grid
+                    AlertDetailRow(
+                        label = languageManager.getLocalizedString("priority"),
+                        value = alertPriority.displayName,
+                        valueColor = alertPriority.color
+                    )
+                    
+                    AlertDetailRow(
+                        label = languageManager.getLocalizedString("status"),
+                        value = alertStatus.displayName,
+                        valueColor = alertStatus.color
+                    )
+                    
+                    AlertDetailRow(
+                        label = languageManager.getLocalizedString("district"),
+                        value = alert.district
+                    )
+                    
+                    AlertDetailRow(
+                        label = languageManager.getLocalizedString("location"),
+                        value = alert.location
+                    )
+                    
+                    AlertDetailRow(
+                        label = languageManager.getLocalizedString("reporter"),
+                        value = alert.reporter
+                    )
+                    
+                    AlertDetailRow(
+                        label = languageManager.getLocalizedString("reporter_contact"),
+                        value = alert.reporterContact
+                    )
+                    
+                    AlertDetailRow(
+                        label = languageManager.getLocalizedString("created_at"),
+                        value = alert.createdAt
+                    )
+                    
+                    AlertDetailRow(
+                        label = languageManager.getLocalizedString("updated_at"),
+                        value = alert.updatedAt
+                    )
+                    
+                    AlertDetailRow(
+                        label = languageManager.getLocalizedString("assigned_to"),
+                        value = alert.assignedTo
+                    )
+                    
+                    AlertDetailRow(
+                        label = languageManager.getLocalizedString("response_time"),
+                        value = alert.responseTime
+                    )
+                    
+                    // Notes Section
+                    if (alert.notes.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = languageManager.getLocalizedString("notes"),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        alert.notes.forEach { note ->
+                            Row(
+                                modifier = Modifier.padding(vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "• ",
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = note,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                    
+                    // Attachments Section
+                    if (alert.attachments.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = languageManager.getLocalizedString("attachments"),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        alert.attachments.forEach { attachment ->
+                            Row(
+                                modifier = Modifier.padding(vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.AttachFile,
+                                    contentDescription = "Attachment",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = attachment,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                    
+                    // Action Buttons
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { /* Handle contact reporter */ },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Phone,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(languageManager.getLocalizedString("contact_reporter"))
+                        }
+                        
+                        OutlinedButton(
+                            onClick = { /* Handle view attachments */ },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.AttachFile,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(languageManager.getLocalizedString("view_attachments"))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AlertDetailRow(
+    label: String,
+    value: String,
+    valueColor: Color = MaterialTheme.colorScheme.onSurfaceVariant
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+    ) {
+        Text(
+            text = "$label:",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.width(120.dp)
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = valueColor,
+            modifier = Modifier.weight(1f)
+        )
     }
 }

@@ -13,16 +13,24 @@ import com.example.myapplication.ui.theme.MyApplicationTheme
 import com.example.myapplication.screens.LoginScreen
 import com.example.myapplication.screens.SignupScreen
 import com.example.myapplication.screens.MainScreen
+import com.example.myapplication.utils.ThemeManager
+import com.example.myapplication.utils.LanguageManager
 
 class MainActivity : ComponentActivity() {
     private lateinit var authManager: AuthManager
+    private lateinit var themeManager: ThemeManager
+    private lateinit var languageManager: LanguageManager
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         authManager = AuthManager(this)
+        themeManager = ThemeManager(this)
+        languageManager = LanguageManager(this)
         enableEdgeToEdge()
         setContent {
-            MyApplicationTheme {
+            val isDarkMode by themeManager.isDarkMode
+            
+            MyApplicationTheme(darkTheme = isDarkMode) {
                 var currentScreen by remember { mutableStateOf("login") }
                 
                 // Check if user is already logged in
@@ -46,6 +54,8 @@ class MainActivity : ComponentActivity() {
                             )
                             "main" -> MainScreen(
                                 authManager = authManager,
+                                themeManager = themeManager,
+                                languageManager = languageManager,
                                 onLogout = { 
                                     authManager.logout()
                                     currentScreen = "login"

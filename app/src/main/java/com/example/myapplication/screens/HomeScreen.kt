@@ -1,5 +1,6 @@
 package com.example.myapplication.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -19,7 +20,11 @@ import com.example.myapplication.AuthManager
 @Composable
 fun HomeScreen(
     authManager: AuthManager,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onNavigateToReport: () -> Unit = {},
+    onNavigateToAlerts: () -> Unit = {},
+    onNavigateToWaterQuality: () -> Unit = {},
+    onNavigateToHistory: () -> Unit = {}
 ) {
     val currentUser = authManager.getCurrentUser()
     
@@ -38,7 +43,12 @@ fun HomeScreen(
         
         item {
             // Quick Actions Section
-            QuickActionsSection()
+            QuickActionsSection(
+                onReportIssueClick = onNavigateToReport,
+                onAlertsClick = onNavigateToAlerts,
+                onWaterQualityClick = onNavigateToWaterQuality,
+                onHistoryClick = onNavigateToHistory
+            )
             
             Spacer(modifier = Modifier.height(24.dp))
         }
@@ -127,7 +137,12 @@ fun HeaderSection(currentUser: com.example.myapplication.User?) {
 }
 
 @Composable
-fun QuickActionsSection() {
+fun QuickActionsSection(
+    onReportIssueClick: () -> Unit = {},
+    onAlertsClick: () -> Unit = {},
+    onWaterQualityClick: () -> Unit = {},
+    onHistoryClick: () -> Unit = {}
+) {
     Column {
         Text(
             text = "Quick Actions",
@@ -145,13 +160,15 @@ fun QuickActionsSection() {
                 icon = Icons.Filled.Report,
                 title = "Report Issue",
                 subtitle = "Report water quality issues",
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = onReportIssueClick
             )
             QuickActionButton(
                 icon = Icons.Filled.WaterDrop,
                 title = "Water Quality",
                 subtitle = "Check current status",
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = onWaterQualityClick
             )
         }
         
@@ -165,13 +182,15 @@ fun QuickActionsSection() {
                 icon = Icons.Filled.Notifications,
                 title = "Alerts",
                 subtitle = "View notifications",
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = onAlertsClick
             )
             QuickActionButton(
                 icon = Icons.Filled.History,
                 title = "History",
                 subtitle = "Past reports",
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = onHistoryClick
             )
         }
     }
@@ -182,10 +201,11 @@ fun QuickActionButton(
     icon: ImageVector,
     title: String,
     subtitle: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
 ) {
     Card(
-        modifier = modifier,
+        modifier = modifier.clickable { onClick() },
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
@@ -235,14 +255,14 @@ fun StatisticsSection() {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            StatCard(
+            HomeStatCard(
                 title = "Safe",
                 value = "85%",
                 icon = Icons.Filled.CheckCircle,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.weight(1f)
             )
-            StatCard(
+            HomeStatCard(
                 title = "Issues",
                 value = "3",
                 icon = Icons.Filled.Warning,
@@ -254,7 +274,7 @@ fun StatisticsSection() {
 }
 
 @Composable
-fun StatCard(
+fun HomeStatCard(
     title: String,
     value: String,
     icon: ImageVector,

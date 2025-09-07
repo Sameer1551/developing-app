@@ -10,12 +10,105 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Lightbulb
-import androidx.compose.material.icons.outlined.Info
 import com.example.myapplication.components.AwarenessCardComponent
 import com.example.myapplication.models.AwarenessCard
+import com.example.myapplication.screens.awareness.*
+
+enum class AwarenessScreenType {
+    Main,
+    WaterPurification,
+    BoilingWater,
+    CholeraPrevention,
+    EmergencyWaterTreatment,
+    WaterConservation,
+    DenguePrevention,
+    WaterQualityTestingCommunity,
+    WaterInfrastructureMaintenance,
+    WaterQualityTestingDIY,
+    SolarWaterDisinfection,
+    TyphoidPrevention,
+    RainwaterHarvesting
+}
 
 @Composable
 fun AwarenessScreen() {
+    var currentScreen by remember { mutableStateOf(AwarenessScreenType.Main) }
+    
+    when (currentScreen) {
+        AwarenessScreenType.Main -> {
+            MainAwarenessContent(
+                onNavigateToDetail = { screenType ->
+                    currentScreen = screenType
+                }
+            )
+        }
+        AwarenessScreenType.WaterPurification -> {
+            WaterPurificationDetailScreen(
+                onBackPressed = { currentScreen = AwarenessScreenType.Main }
+            )
+        }
+        AwarenessScreenType.BoilingWater -> {
+            BoilingWaterDetailScreen(
+                onBackPressed = { currentScreen = AwarenessScreenType.Main }
+            )
+        }
+        AwarenessScreenType.CholeraPrevention -> {
+            CholeraPreventionDetailScreen(
+                onBackPressed = { currentScreen = AwarenessScreenType.Main }
+            )
+        }
+        AwarenessScreenType.EmergencyWaterTreatment -> {
+            EmergencyWaterTreatmentDetailScreen(
+                onBackPressed = { currentScreen = AwarenessScreenType.Main }
+            )
+        }
+        AwarenessScreenType.WaterConservation -> {
+            WaterConservationDetailScreen(
+                onBackPressed = { currentScreen = AwarenessScreenType.Main }
+            )
+        }
+        AwarenessScreenType.DenguePrevention -> {
+            DenguePreventionDetailScreen(
+                onBackPressed = { currentScreen = AwarenessScreenType.Main }
+            )
+        }
+        AwarenessScreenType.WaterQualityTestingCommunity -> {
+            WaterQualityTestingCommunityDetailScreen(
+                onBackPressed = { currentScreen = AwarenessScreenType.Main }
+            )
+        }
+        AwarenessScreenType.WaterInfrastructureMaintenance -> {
+            WaterInfrastructureMaintenanceDetailScreen(
+                onBackPressed = { currentScreen = AwarenessScreenType.Main }
+            )
+        }
+        AwarenessScreenType.WaterQualityTestingDIY -> {
+            WaterQualityTestingDIYDetailScreen(
+                onBackPressed = { currentScreen = AwarenessScreenType.Main }
+            )
+        }
+        AwarenessScreenType.SolarWaterDisinfection -> {
+            SolarWaterDisinfectionDetailScreen(
+                onBackPressed = { currentScreen = AwarenessScreenType.Main }
+            )
+        }
+        AwarenessScreenType.TyphoidPrevention -> {
+            TyphoidPreventionDetailScreen(
+                onBackPressed = { currentScreen = AwarenessScreenType.Main }
+            )
+        }
+        AwarenessScreenType.RainwaterHarvesting -> {
+            RainwaterHarvestingDetailScreen(
+                onBackPressed = { currentScreen = AwarenessScreenType.Main }
+            )
+        }
+    }
+}
+
+@Composable
+private fun MainAwarenessContent(
+    onNavigateToDetail: (AwarenessScreenType) -> Unit
+) {
     val awarenessCards = remember {
         listOf(
             AwarenessCard(
@@ -210,8 +303,21 @@ fun AwarenessScreen() {
                 AwarenessCardComponent(
                     card = card,
                     onClick = {
-                        // Handle card click - could navigate to detail screen
-                        // For now, just a placeholder
+                        // Navigate to appropriate detail screen based on card ID
+                        when (card.id) {
+                            "water_purification" -> onNavigateToDetail(AwarenessScreenType.WaterPurification)
+                            "boiling_water" -> onNavigateToDetail(AwarenessScreenType.BoilingWater)
+                            "cholera_prevention" -> onNavigateToDetail(AwarenessScreenType.CholeraPrevention)
+                            "emergency_water_treatment" -> onNavigateToDetail(AwarenessScreenType.EmergencyWaterTreatment)
+                            "water_conservation" -> onNavigateToDetail(AwarenessScreenType.WaterConservation)
+                            "dengue_prevention" -> onNavigateToDetail(AwarenessScreenType.DenguePrevention)
+                            "water_quality_testing_community" -> onNavigateToDetail(AwarenessScreenType.WaterQualityTestingCommunity)
+                            "water_infrastructure_maintenance" -> onNavigateToDetail(AwarenessScreenType.WaterInfrastructureMaintenance)
+                            "water_quality_testing_diy" -> onNavigateToDetail(AwarenessScreenType.WaterQualityTestingDIY)
+                            "solar_water_disinfection" -> onNavigateToDetail(AwarenessScreenType.SolarWaterDisinfection)
+                            "typhoid_prevention" -> onNavigateToDetail(AwarenessScreenType.TyphoidPrevention)
+                            "rainwater_harvesting" -> onNavigateToDetail(AwarenessScreenType.RainwaterHarvesting)
+                        }
                     }
                 )
             }

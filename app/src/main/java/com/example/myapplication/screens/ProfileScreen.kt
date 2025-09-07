@@ -27,6 +27,7 @@ import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.myapplication.AuthManager
 import com.example.myapplication.data.ProfilePhotoStorage
+import com.example.myapplication.utils.ThemeManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -46,6 +47,8 @@ enum class ProfileScreenType {
 @Composable
 fun ProfileScreen(
     authManager: AuthManager,
+    themeManager: ThemeManager,
+    languageManager: com.example.myapplication.utils.LanguageManager,
     onLogout: () -> Unit
 ) {
     val currentUser = authManager.getCurrentUser()
@@ -97,19 +100,40 @@ fun ProfileScreen(
                 )
             }
             ProfileScreenType.Settings -> {
-                SettingsScreen(
-                    onBackPressed = { currentScreen = ProfileScreenType.Main }
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = 96.dp) // Add bottom padding for bottom navigation
+                ) {
+                    SettingsScreen(
+                        themeManager = themeManager,
+                        authManager = authManager,
+                        languageManager = languageManager,
+                        onBackPressed = { currentScreen = ProfileScreenType.Main }
+                    )
+                }
             }
             ProfileScreenType.HelpSupport -> {
-                HelpSupportScreen(
-                    onBackPressed = { currentScreen = ProfileScreenType.Main }
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = 96.dp) // Add bottom padding for bottom navigation
+                ) {
+                    HelpSupportScreen(
+                        onBackPressed = { currentScreen = ProfileScreenType.Main }
+                    )
+                }
             }
             ProfileScreenType.About -> {
-                AboutScreen(
-                    onBackPressed = { currentScreen = ProfileScreenType.Main }
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = 96.dp) // Add bottom padding for bottom navigation
+                ) {
+                    AboutScreen(
+                        onBackPressed = { currentScreen = ProfileScreenType.Main }
+                    )
+                }
             }
         }
     }
@@ -235,6 +259,10 @@ private fun MainProfileContent(
                     Spacer(modifier = Modifier.height(12.dp))
                     ProfileInfoRow("Mobile", user.mobileNumber)
                     Spacer(modifier = Modifier.height(12.dp))
+                    if (user.email.isNotBlank()) {
+                        ProfileInfoRow("Email", user.email)
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
                     ProfileInfoRow("Status", "Active")
                 }
             }
